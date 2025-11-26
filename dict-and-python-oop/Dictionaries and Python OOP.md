@@ -500,45 +500,90 @@ class Tree: # rename all "tree_dict" to "self"!
 
 ## More Dictionaries
 
-In the last section, we've taken a look at the `class` syntax of Python. I assume that you've played around with it and get yourself familiar with this new tool.
+In the last section, we've made a pragmatic compromise to accept the Python's `class` syntax as a solution to our dilemma. We did so because we can't directly add a new syntax to the language. Now that Python has designed the `class` syntax, we want to know how it actually works.
 
-​	In previous sections, I've mentioned that the dot operator seems to serve a dual purpose, one for namespaces and one for instances. Now think about what a namespace actually is: a container that maps names to objects. This is exactly what a dictionary does!
+​	Let's think as if we were the designers of Python. What work has to be done for the `class` syntax to work?
 
-​	Actually, that is absolutely right! Namespaces, or even classes themselves, are built upon dictionaries. Python secretly puts a `__dict__` attribute to each object during object creation. Given an object `obj`, we can access its underlying dictionary by writing `obj.__dict__`. Guess what will happen if we run the code below!
+​	Earlier, we were struggling to find a concise way to do everything. But now as a language designer, we can break free from the conciseness chains. However complex our design might be, we can simply hide the complexity behind the scenes. We may write hundreds of lines of code for a single purpose, but we can wrap it all up into a single operator, say the dot operator.
 
-```python
-class Tree: # implementation is the same as in last section
-    ...
+> [!Tip]
+>
+> Hiding complexities behind a neat syntax is a common practice in programming language design. This practice is referred to as **syntactic sugar**. As it happens, programmers love this type of sugar!
 
-tr = Tree(1)
-print(tr.__dict__)
-print(Tree.__dict__)
-```
+​	With the language designer mindset, let's pick up our dictionaries and work on them. Now we list our problems to be solved:
 
-​	If everything works out, you should see that `print(tr.__dict__)` outputs exactly what we've ended up with earlier. For your reference, my Python interpreter outputs `{'label': 1, 'branches': []}`.
+- Dedicated functions for every instance eat up memory, so functions should be separated.
+- Functions floating in the global namespace are messy, so they should be put away in a container.
+- A unified, object-based interface should be provided for both attributes and methods.
 
-​	However, the next line gets sort of messy. Here's what my Python interpreter shows:
+​	Let's first tackle the first two problems. We need a place to store the shared functions to save memory, and this place can't be the global namespace. A natural solution is to give the **class itself** a "container"—a dictionary—to hold all the functions.
 
-```
-{'__module__': '__main__', '__firstlineno__': 1, '__init__': <function Tree.__init__ at 0x0000023D0C524720>, 'is_leaf': <function Tree.is_leaf at 0x0000023D0C524860>, 'print_me': <function Tree.print_me at 0x0000023D0C5247C0>, 'is_binary': <function Tree.is_binary at 0x0000023D0C5249A0>, '__static_attributes__': ('branches', 'label'), '__dict__': <attribute '__dict__' of 'Tree' objects>, '__weakref__': <attribute '__weakref__' of 'Tree' objects>, '__doc__': None}
-```
+​	Back to our `Tree` example, we want to put every function inside a dictionary. However, the only two ways to make a function are (a) through `def` statements and (b) using lambda expressions. The former automatically binds the function to a name, which is by default in the global namespace, and the latter allows for only one expression.
 
-​	The output may vary depending on different Python versions. For the purpose of this article, we only care about part of the dictionary:
+​	Clearly, we need a workaround. Recall that in our first closure-based vending machine example:
 
 ```python
-{
-	...,
-	'__init__': <function Tree.__init__ ...>,
-	'is_leaf': <function Tree.is_leaf ...>,
-	'print_me': <function Tree.print_me ...>,
-	'is_binary': <function Tree.is_binary ...>,
-	...
-}
+def make_vending_machine(product, price):
+	def restock(amount):
+        # use dispatch['balance'] and dispatch['stock'] instead
+        ...
+        
+    def deposit(amount):
+        # use dispatch['balance'] and dispatch['stock'] instead
+        ...
+    
+    def vend():
+        # use dispatch['balance'] and dispatch['stock'] instead
+        ...
+        
+    dispatch = {'restock': restock,
+                'deposit': deposit,
+                'vend': vend,
+                'balance': 0,
+                'stock': 0}
+    
+    return dispatch
 ```
 
-​	These four functions are exactly what we've written inside the `class` block! Now, `Tree.is_leaf` looks just like a dictionary look-up, not too much different than `tr.label`. The dot operator is no longer assuming two roles. A beautiful unification!
+​	In this example, we are not polluting the global namespace with functions. That's because all the functions are defined within the `making_vending_machine` function, and returned a dispatch dictionary containing these functions.
 
-​	But here's one critical problem: if the dot operator acted exactly as dictionary look-up, how would `tr.is_leaf` give us a bound method that is derived from the `Tree`'s dictionary?
+​	In the light of this, we can also use this pattern to organize our functions. This time, instead of storing dedicated functions (like `restock` and `deposit` that are bound to one specific object) into a dictionary, we store the general functions (like `is_leaf` that requires a `tree_dict` argument) into the dictionary.
+
+```python
+def make_tree_class():
+    # here we write TREE_DICT since we are operating on dicts
+    # still, don't for get the SELF convention when writing genuine classes!
+    def __init__(tree_dict, label, branches=None):
+        if branches is None:
+            branches = []
+	    tree_dict['label'] = label
+	    tree_dict['branches'] = branches
+        
+    def is_leaf(tree_dict):
+        ...
+    
+    def print_me(tree_dict):
+        ...
+    
+    def is_binary(tree_dict):
+        ...
+    
+    class_dict = {'__init__': __init__,
+                  'is_leaf': is_leaf,
+                  'print_me': print_me,
+                  'is_binary': is_binary}
+    return class_dict
+
+Tree = make_tree_class()
+```
+
+​	Now the functions are neatly contained in a dictionary! We've just used the same pattern to make a container for functions as to build objects. Let's take some time to appreciate the striking similarity between the "class" and ordinary objects. It again proves that our idea of "objects as dictionaries" is infinitely powerful.
+
+> [!Tip]
+>
+> We see a similar pattern in `make_vending_machine` and `make_tree_class`: they are both responsible to produce something for later use. This **design pattern** is known as the **factory pattern**, and functions of this kind are called **factory functions**.
+>
+> The `make_vending_machine` example is the most common usage of the factory pattern: for producing instances. In writing `make_tree_class`, we stumble upon a rare use case for the factory pattern: for producing classes/types.
 
 ​	(Unfinished)
 
