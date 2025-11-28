@@ -115,7 +115,7 @@ def make_vending_machine(product, price):
 
 ```python
 def make_vending_machine(product, price):
-	def restock(amount):
+    def restock(amount):
         # use dispatch['balance'] and dispatch['stock'] instead
         ...
         
@@ -272,14 +272,14 @@ def is_binary(tree_dict):
 
 ```python
 class <Class_Name>:
-	<Class_Suite>
+    <Class_Suite>
 ```
 
 ​	Think of the class block as a container. Remember those "floating functions" (`is_leaf`, `print_me`) that were cluttering up our global namespace? We can simply move them inside this block to keep things organized. Remember to replace subscription with the dot operation!
 
 ```python
 class Tree:
-	def is_leaf(tree_dict):
+    def is_leaf(tree_dict):
         return not tree_dict.branches
     
     def print_me(tree_dict):
@@ -295,7 +295,7 @@ class Tree:
 >
 > At first glance, the dot operator is used differently than "accessing elements in a dictionary" I promised before. For now, let's think of it as two operations (retrieving objects in a certain namespace and accessing elements in a dictionary-like object) sharing one symbol. We'll later discover that these two operations are essentially the same.
 
-​	 "Wait a second!" you might say, "where is the `create_tree` function? And you promised we can write `tr.is_leaf()`!" 
+​	"Wait a second!" you might say, "where is the `create_tree` function? And you promised we can write `tr.is_leaf()`!" 
 
 ​	Let's first address the `create_tree` problem. If we now look closer at the `create_tree` function, we may notice that this function is actually doing two things: (a) creating a dictionary (an object) and (b) putting things into the dictionary using subscription. The former is what we actually refer to as the **creation** of an object, while the latter the **initialization** of the newly created object.
 
@@ -327,12 +327,12 @@ def initialize_tree(tree_dict, label, branches=None): # we call this initialize_
 ```python
 class Tree:
     def initialize_tree(tree_dict, label, branches=None):
-    	if branches is None:
-        	branches = []
-	    tree_dict.label = label
-	    tree_dict.branches = branches
+        if branches is None:
+            branches = []
+        tree_dict.label = label
+        tree_dict.branches = branches
         
-	def is_leaf(tree_dict):
+    def is_leaf(tree_dict):
         return not tree_dict.branches
     
     def print_me(tree_dict):
@@ -352,12 +352,12 @@ class Tree:
 
 ```python
 class Tree:
-	...
+    ...
 
 tr = Tree()
 Tree.initialize_tree(tr, 1)
 if Tree.is_leaf(tr):
-	Tree.print_me(tr)
+    Tree.print_me(tr)
 ```
 
 ​	Now all the functions have been neatly put away in the `Tree` class. The next goal is to get back to the promise of `tr.is_leaf()`. But surprise surprise! Creating an object by calling a class already enables us to do so! The designers of Python also see this urge, and have readily fulfilled the promise. If `tr` is created using `Tree()`, then `tr.is_leaf` is automatically interpreted as `Tree.is_leaf(tr)`! This is because in creating this object, Python secretly stores in it which class it belongs to. This makes it possible for all the magic that follows.
@@ -440,7 +440,7 @@ tr3.initialize_tree('And more!', [tr1, tr2])
 
 ```python
 class Tree:
-	def __init__(tree_dict, label, branches=None): # name changed!
+    def __init__(tree_dict, label, branches=None): # name changed!
         ...
     ...
 
@@ -458,13 +458,13 @@ tr2 = Tree(1)
 
 ```python
 class Tree:
-	def __init__(tree_dict, label, branches=None):
+    def __init__(tree_dict, label, branches=None):
         if branches is None:
-        	branches = []
-	    tree_dict.label = label
-	    tree_dict.branches = branches
+            branches = []
+        tree_dict.label = label
+        tree_dict.branches = branches
         
-	def is_leaf(tree_dict):
+    def is_leaf(tree_dict):
         return not tree_dict.branches
     
     def print_me(tree_dict):
@@ -478,13 +478,13 @@ class Tree:
 
 ```python
 class Tree: # rename all "tree_dict" to "self"!
-	def __init__(self, label, branches=None):
+    def __init__(self, label, branches=None):
         if branches is None:
-        	branches = []
-	    self.label = label
-	    self.branches = branches
+            branches = []
+        self.label = label
+        self.branches = branches
         
-	def is_leaf(self):
+    def is_leaf(self):
         return not self.branches
     
     def print_me(self):
@@ -524,7 +524,7 @@ In the last section, we've made a pragmatic compromise to accept the Python's `c
 
 ```python
 def make_vending_machine(product, price):
-	def restock(amount):
+    def restock(amount):
         # use dispatch['balance'] and dispatch['stock'] instead
         ...
         
@@ -556,8 +556,8 @@ def make_tree_class():
     def __init__(tree_dict, label, branches=None):
         if branches is None:
             branches = []
-	    tree_dict['label'] = label
-	    tree_dict['branches'] = branches
+        tree_dict['label'] = label
+        tree_dict['branches'] = branches
         
     def is_leaf(tree_dict):
         ...
@@ -584,6 +584,121 @@ Tree = make_tree_class()
 > We see a similar pattern in `make_vending_machine` and `make_tree_class`: they are both responsible to produce something for later use. This **design pattern** is known as the **factory pattern**, and functions of this kind are called **factory functions**.
 >
 > The `make_vending_machine` example is the most common usage of the factory pattern: for producing instances. In writing `make_tree_class`, we stumble upon a rare use case for the factory pattern: for producing classes/types.
+
+​	Now that we have a `class_dict` to hold our shared functions, we've solved the memory and namespace problems. The final piece of the puzzle is the unified interface.
+
+​	Our task is to design a unified interface that allows for both instance attribute look-up and methods look-up. We can achieve the former by simply looking at the dictionary representing the instance. The latter, however, is a bit tricky. Given an instance, we need to find its corresponding class dictionary.
+
+​	One immediate solution is to have the instance itself remember its corresponding class dictionary. But when?
+
+​	The most logical moment is during the instance's creation. When we create an instance, we know which class it belongs to. This is the perfect time to establish the link.
+
+​	So, our "object creation" process needs to do two things: (a) create a new, empty dictionary to store the instance's attributes, and (b) secretly store the corresponding class dictionary in it.
+
+​	Try to write a function `create_instance(cls_dict)` that mimics this process, where `cls_dict` is a class dictionary. One possible version looks like this:
+
+```python
+def create_instance(cls_dict):
+    inst = dict() # step (a)
+    inst['__class__'] = cls_dict # step (b)
+    return inst
+```
+
+> [!Tip]
+>
+> As a bonus, try to automate initialization by trying to call `__init__` on the object being created.
+>
+> *Hint*: you may find the `*args, **kwargs` syntax useful. You may refer to [our handout](https://sicp.pascal-lab.net/2025/projects/proj03/2_5.html) for a brief introduction and [this official tutorial](https://docs.python.org/3/tutorial/controlflow.html#defining-functions) to learn more about functions.
+
+​	With the secret `__class__` attribute, we can get to working on our unified interface. Let's write a function `get_attribute(inst, attr)` to represent our interface, where `inst` is the instance dictionary and `attr` is the attribute to look up for.
+
+​	The interface needs to handle two cases: (a) the attribute is a piece of data unique to the instance (like `label`) and (b) the attribute is an action, or method, shared among all instances (like `is_leaf`).
+
+​	Let's think through the logic. When we ask for an attribute, say `tr`'s label, we can first look for it in `tr`'s own dictionary. If we find it, our job is done.
+
+​	But what if we ask for `tr`'s `is_leaf`? It's not in `tr`'s dictionary. We would need to look at the class dictionary. This is when the secret `__class__` attribute comes in. If we don't find the attribute on the instance, we look further in the `__class__` dictionary.
+
+​	As a brief summary, we follow a **look-up chain**: instance dictionary → class dictionary.
+
+​	Try to implement this logic for yourself. Here's one possible version:
+
+```python
+def get_attribute(inst, attr):
+    if attr in inst:
+        return inst[attr] # found in the instance dict, good!
+    # otherwise, look in the class dictionary
+    assert '__class__' in inst, "an instance must have __class__ attribute"
+    cls_dict = inst['__class__']
+    if attr in cls_dict:
+        return cls_dict[attr]
+    # if ATTR is not found in the class dictionary,
+    # we can determine that this is an invalid look-up
+    raise AttributeError
+```
+
+​	Now putting every piece together, let's see if we've finally reached our goal.
+
+```python
+def make_tree_class():
+    ...
+
+# a version that automates initialization
+def create_instance(cls_dict, *args, **kwargs):
+    inst = dict() # step (a)
+    inst['__class__'] = cls_dict # step (b)
+    if '__init__' in cls_dict:
+        cls_dict['__init__'](inst, *args, **kwargs)
+    return inst
+
+def get_attribute(inst, attr):
+    ...
+   
+Tree = make_tree_class()			# mimics class Tree: ...
+tr = create_instance(Tree, 1)		# mimics tr = Tree(1)
+print(get_attribute(tr, 'label'))	# mimics print(tr.label)
+get_attribute(tr, 'is_leaf')()		# mimics tr.is_leaf()
+```
+
+​	If you try this out, you'll find that we'll get an error: 
+
+```
+Traceback (most recent call last):
+  File "...", line ..., in ...
+    get_attribute(tr, 'is_leaf')()      # mimics tr.is_leaf()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+TypeError: make_tree_class.<locals>.is_leaf() missing 1 required positional argument: 'tree_dict'
+```
+
+​	What went wrong? The error message tells us that the function is expecting one more argument: `tree_dict`. That makes sense. If we trace our look-up process (as you are supposed to!), we'll find that the result we get is a function that takes one argument, not a bound method we want.
+
+​	The good news is, we know which instance is being operated on, and we can, therefore, secretly bind it to the first argument, creating a partial function that we want. Try this for yourself and compare your version to the one presented below.
+
+```python
+def get_attribute(inst, attr):
+    if attr in inst:
+        return inst[attr]
+    assert '__class__' in inst, "an instance must have __class__ attribute"
+    
+    cls_dict = inst['__class__']
+    if attr in cls_dict:
+        obj = cls_dict[attr]
+        
+        # callable returns if an object can be called like a function
+        if callable(obj):
+            def bound_method(*args, **kwargs):
+                return obj(inst, *args, **kwargs)
+            return bound_method
+            
+        return obj
+    
+    raise AttributeError
+```
+
+​	Now if we run `get_attribute(tr, 'is_leaf')()`, we should get no error. By now, we've effectively handcrafted our own version of OOP (or at least part of it) using dictionaries. It's time to play around with this tool and appreciate the work we've done.
+
+>[!Tip]
+>
+>Here's a caveat: if you try to use assignment in our current model, like `get_attribute(tr, 'label') = 0`, it will not work. To solve this problem, we can write another `set_attribute` function. Try writing one yourself. It should be roughly like `get_attribute`.
 
 ​	(Unfinished)
 
